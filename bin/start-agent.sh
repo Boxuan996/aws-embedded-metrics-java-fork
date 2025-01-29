@@ -18,10 +18,25 @@ tempfile="$rootdir/src/integration-test/resources/agent/.temp"
 # Configure and start the agent
 ###################################
 
+# Store the AWS STS assume-role output and extract credentials directly
+CREDS=$(aws sts assume-role \
+    --role-arn arn:aws:iam::863722843142:role/CodeBuildExecutionRole \
+    --role-session-name "session-$(uuidgen)" \
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+    --output text \
+    --duration-seconds 3600) 
+
+# Parse the output into separate variables
+read AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN <<< $CREDS
+
+# Export the variables
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+
 pushd $rootdir/src/integration-test/resources/agent
 echo "[AmazonCloudWatchAgent]
 aws_access_key_id = $AWS_ACCESS_KEY_ID
 aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+aws_session_token = $AWS_SESSION_TOKEN
 " > ./.aws/credentials
 
 echo "[profile AmazonCloudWatchAgent]
