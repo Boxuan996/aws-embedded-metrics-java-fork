@@ -18,12 +18,17 @@ tempfile="$rootdir/src/integration-test/resources/agent/.temp"
 # Configure and start the agent
 ###################################
 
+# Add debug logging
+echo "Debug: Checking AWS credentials"
+aws sts get-caller-identity
+
 # Store the AWS STS assume-role output and extract credentials directly
 CREDS=$(aws sts assume-role \
     --role-arn arn:aws:iam::863722843142:role/CodeBuildExecutionRole \
     --role-session-name test \
     --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
-    --output text)
+    --output text \
+    --duration-seconds 3600)
 
 # Parse the output into separate variables
 read AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN <<< $CREDS
@@ -41,6 +46,7 @@ pushd $rootdir/src/integration-test/resources/agent
 echo "[AmazonCloudWatchAgent]
 aws_access_key_id = $AWS_ACCESS_KEY_ID
 aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+aws_session_token = $AWS_SESSION_TOKEN
 " > ./.aws/credentials
 
 echo "[profile AmazonCloudWatchAgent]
@@ -52,5 +58,6 @@ docker run  -p 25888:25888/udp -p 25888:25888/tcp  \
     -e AWS_REGION=$AWS_REGION \
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     agent:latest &> $tempfile &
 popd
